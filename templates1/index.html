@@ -1,96 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Objave</title>
-
-<style>
-body {
-    font-family: Arial;
-    background: #f5f5f5;
-    padding: 20px;
-}
-
-.post {
-    background: white;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-}
-
-img {
-    max-width: 300px;
-    margin-top: 10px;
-    border-radius: 6px;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>Osebni zapiski</title>
 </head>
-
 <body>
 
-<h1>Objave</h1>
+    <h1>Osebni zapiski</h1>
 
-<p>Prijavljen: {{ session.username }}</p>
+    <p>Pozdravljen, {{ session.username }}</p>
 
-<a href="{{ url_for('logout') }}">Odjava</a>
+    <a href="{{ url_for('logout') }}">
+        <button>Odjava</button>
+    </a>
 
-<hr>
+    <hr>
 
-<h2>Nova objava</h2>
+    <h2>Dodaj zapis</h2>
 
-<form id="add-form" enctype="multipart/form-data">
-    <textarea id="content" placeholder="Napiši nekaj..." required></textarea>
-    <br><br>
-    <input type="file" id="image" accept="image/*">
-    <br><br>
-    <button type="submit">Objavi</button>
-</form>
+    <form id="add-form">
+        <input type="text" id="title" placeholder="Naslov" required>
+        <br><br>
+        <textarea
+            id="content"
+            placeholder="Vsebina"
+            rows="5"
+            required></textarea>
+        <br><br>
+        <button type="submit">Dodaj</button>
+    </form>
 
-<hr>
+    <hr>
 
-<h2>Vse objave</h2>
+    <h2>Moji zapiski</h2>
 
-<div id="posts">
-    {% for post in posts %}
-    <div class="post" id="post-{{ post.id }}">
-        <b>{{ post.author }}</b>
-        <p>{{ post.content }}</p>
+    <div id="notes-container">
+        {% for note in notes %}
+            <div id="note-{{ note.id }}">
+                <h3>{{ note.title }}</h3>
+                <p>{{ note.content }}</p>
 
-        {% if post.image %}
-            <img src="{{ url_for('static', filename=post.image) }}">
-        {% endif %}
+                <button onclick="startEdit({{ note.id }}, '{{ note.title|escape }}', `{{ note.content|escape }}`)">
+                    Uredi
+                </button>
 
-        <small>{{ post.created_at }}</small>
+                <button onclick="deleteNote({{ note.id }})">
+                    Izbriši
+                </button>
+
+                <hr>
+            </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
 
-<script>
-document.getElementById("add-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    <script>
+        // Dodajanje novega zapisa
+        document.getElementById("add-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
 
-    const formData = new FormData();
+            const title = document.getElementById("title").value;
+            const content = document.getElementById("content").value;
 
-    formData.append("content", document.getElementById("content").value);
+            const res = await fetch("/api/notes/add", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ title, content })
+            });
 
-    const img = document.getElementById("image");
-    if (img.files.length > 0) {
-        formData.append("image", img.files[0]);
-    }
+            const data = await res.json();
 
-    const res = await fetch("/api/posts/add", {
-        method: "POST",
-        body: formData
-    });
+            if (!res.ok) {
+                alert(data.error || "Napaka pri dodajanju");
+                return;
+            }
 
-    if (res.ok) {
-        location.reload();
-    } else {
-        const data = await res.json();
-        alert(data.error || "Napaka");
-    }
-});
-</script>
+            // Osveži stran, da se prikaže nov zapis
+            location.reload();
+        });
+
+
+        // Brisanje zapisa
+        async function deleteNote(id) {
+            if (!confirm("Res želiš izbrisati ta zapis?")) return;
+
+            const res = await fetch(`/api/notes/${id}/delete`, {
+                method: "DELETE"
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Napaka pri brisanju");
+                return;
+            }
+
+            document.getElementById("note-" + id).remove();
+        }
+
+
+        // Urejanje zapisa (preko promptov – enostavno za razlago)
+        async function startEdit(id, oldTitle, oldContent) {
+            const newTitle = prompt("Nov naslov:", oldTitle);
+            if (newTitle === null) return;
+
+            const newContent = prompt("Nova vsebina:", oldContent);
+            if (newContent === null) return;
+
+            const res = await fetch(`/api/notes/${id}/edit`, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ title: newTitle, content: newContent })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Napaka pri urejanju");
+                return;
+            }
+
+            // Osveži stran, da se prikažejo spremembe
+            location.reload();
+        }
+    </script>
 
 </body>
 </html>

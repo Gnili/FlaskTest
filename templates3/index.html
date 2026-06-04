@@ -27,6 +27,7 @@
         cursor: pointer;
         font-size: 14px;
     }
+    
 
 </style>
 </head>
@@ -45,10 +46,22 @@
 
     <!-- Prikaz seznama pesmi -->
     <h2>Seznam glasb</h2>
+    <div>
+     Skupaj pesmi: <span id="song-count">0</span>
+    </div>
+    
     <div id="songs-container"></div>
 
+    <button id="show-count-btn">Pokaži število pesmi</button>
+
+    <p id="count-box" style="display:none;">
+        Število pesmi: <span id="song-count-display">0</span>
+    </p>
+    
 
     <script>
+
+        let lastSongCount = 0;
         // -----------------------------
         //  Pridobivanje in prikaz pesmi
         // -----------------------------
@@ -57,12 +70,15 @@
             const songs = await res.json();
             const container = document.getElementById('songs-container');
 
+            document.getElementById('song-count-display').innerText = songs.length;
+
             container.innerHTML = '';
 
             if (songs.length === 0) {
                 container.innerHTML = '<p>Ni še dodanih glasb.</p>';
                 return;
             }
+
 
             songs.forEach(song => {
                 const card = document.createElement('div');
@@ -143,6 +159,9 @@
 
             loadSongs();
         }
+         document.getElementById('show-count-btn').addEventListener('click', () => {
+        document.getElementById('count-box').style.display = 'block';
+    });
 
         // Ob zagonu naloži pesmi
         loadSongs();
