@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Glasbeni seznam</title>
+        <style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+    }
+
+    h1, h2, h3 {
+        color: #444;
+        margin-bottom: 10px;
+    }
+
+
+    button {
+        padding: 8px 14px;
+        background: black;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+</style>
+</head>
+
+<body>
+    <h1>Glasbeni seznam</h1>
+
+    <!-- Obrazec za dodajanje nove pesmi -->
+    <h2>Dodaj glasbo</h2>
+    <form id="add-form">
+        <input type="text" id="title" placeholder="Naslov" required>
+        <input type="text" id="artist" placeholder="Izvajalec">
+        <input type="text" id="album" placeholder="Album">
+        <button type="submit">Dodaj</button>
+    </form>
+
+    <!-- Prikaz seznama pesmi -->
+    <h2>Seznam glasb</h2>
+    <div id="songs-container"></div>
+
+
+    <script>
+        // -----------------------------
+        //  Pridobivanje in prikaz pesmi
+        // -----------------------------
+        async function loadSongs() {
+            const res = await fetch('/api/songs');
+            const songs = await res.json();
+            const container = document.getElementById('songs-container');
+
+            container.innerHTML = '';
+
+            if (songs.length === 0) {
+                container.innerHTML = '<p>Ni še dodanih glasb.</p>';
+                return;
+            }
+
+            songs.forEach(song => {
+                const card = document.createElement('div');
+                card.innerHTML = `
+                    <strong>${song.title}</strong>
+                    ${song.artist ? ' — ' + song.artist : ''}
+                    ${song.album ? ' (' + song.album + ')' : ''}
+                    <br>
+                    <button onclick="editSong(${song.id})">Uredi</button>
+                    <button onclick="deleteSong(${song.id})">Izbriši</button>
+                    <hr>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+
+        // -----------------------------
+        //  Dodajanje nove pesmi
+        // -----------------------------
+        document.getElementById('add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value;
+            const artist = document.getElementById('artist').value;
+            const album = document.getElementById('album').value;
+
+            const res = await fetch('/api/songs/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title, artist, album })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error);
+                return;
+            }
+
+            // Po uspešnem dodajanju počistimo obrazec
+            document.getElementById('add-form').reset();
+            loadSongs();
+        });
+
+
+        // -----------------------------
+        //  Brisanje pesmi
+        // -----------------------------
+        async function deleteSong(id) {
+            if (!confirm('Ste prepričani?')) return;
+
+            await fetch(`/api/songs/${id}/delete`, { method: 'DELETE' });
+            loadSongs();
+        }
+
+
+        // -----------------------------
+        //  Urejanje pesmi
+        // -----------------------------
+        async function editSong(id) {
+            const title = prompt('Nov naslov:');
+            if (title === null) return;
+
+            const artist = prompt('Nov izvajalec:');
+            const album = prompt('Nov album:');
+
+            const res = await fetch(`/api/songs/${id}/edit`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title, artist, album })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                alert(data.error);
+            }
+
+            loadSongs();
+        }
+
+        // Ob zagonu naloži pesmi
+        loadSongs();
+    </script>
+</body>
+</html>

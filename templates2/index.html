@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socialna platforma</title>
+        <style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+    }
+
+    h1, h2, h3 {
+        color: #444;
+        margin-bottom: 10px;
+    }
+
+
+    button {
+        padding: 8px 14px;
+        background: black;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+</style>
+</head>
+<body>
+
+    <h1>Socialna platforma</h1>
+
+    <p>Pozdravljen, {{ session.username }}</p>
+
+    <a href="{{ url_for('logout') }}">
+        <button>Odjava</button>
+    </a>
+
+    <hr>
+
+    <!-- ADD POST -->
+    <h2>Nova objava</h2>
+
+    <form id="post-form">
+        <textarea id="content" placeholder="Kaj razmišljaš?" required></textarea>
+        <br><br>
+        <input type="file" id="image">
+        <br><br>
+        <button type="submit">Objavi</button>
+    </form>
+
+    <p id="message"></p>
+
+    <hr>
+
+    <!-- POSTS -->
+    <h2>Objave</h2>
+    <div id="posts"></div>
+
+    <script>
+
+        const staticUrlPath = "{{ url_for('static', filename='') }}";
+
+        // LOAD POSTS
+        async function loadPosts() {
+            let res = await fetch("/api/posts");
+            let posts = await res.json();
+
+            let container = document.getElementById("posts");
+            container.innerHTML = "";
+
+            posts.forEach(p => {
+
+                let div = document.createElement("div");
+                div.innerHTML = `
+                    <h3>${p.author}</h3>
+                    <p>${p.content}</p>
+
+                    ${p.image ? `<img src="${staticUrlPath}${p.image}" width="200">` : ""}
+
+
+                    ${p.author === "{{ session.username }}" 
+                        ? `<button onclick="deletePost(${p.id})">Izbriši</button>` 
+                        : ""}
+                    
+                    <hr>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        // ADD POST
+        document.getElementById("post-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            let formData = new FormData();
+            formData.append("content", document.getElementById("content").value);
+
+            let image = document.getElementById("image").files[0];
+            if (image) formData.append("image", image);
+
+            await fetch("/api/posts/add", {
+                method: "POST",
+                body: formData
+            });
+
+            document.getElementById("content").value = "";
+            document.getElementById("image").value = "";
+
+            loadPosts();
+        });
+
+        // DELETE POST
+        async function deletePost(id) {
+            await fetch("/api/posts/" + id + "/delete", {
+                method: "DELETE"
+            });
+
+            loadPosts();
+        }
+
+        loadPosts();
+
+    </script>
+
+</body>
+</html>

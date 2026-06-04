@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Objave</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+.post {
+    background: white;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+img {
+    max-width: 300px;
+    margin-top: 10px;
+    border-radius: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Objave</h1>
+
+<p>Prijavljen: {{ session.username }}</p>
+
+<a href="{{ url_for('logout') }}">Odjava</a>
+
+<hr>
+
+<h2>Nova objava</h2>
+
+<form id="add-form" enctype="multipart/form-data">
+    <textarea id="content" placeholder="Napiši nekaj..." required></textarea>
+    <br><br>
+    <input type="file" id="image" accept="image/*">
+    <br><br>
+    <button type="submit">Objavi</button>
+</form>
+
+<hr>
+
+<h2>Vse objave</h2>
+
+<div id="posts">
+    {% for post in posts %}
+    <div class="post" id="post-{{ post.id }}">
+        <b>{{ post.author }}</b>
+        <p>{{ post.content }}</p>
+
+        {% if post.image %}
+            <img src="{{ url_for('static', filename=post.image) }}">
+        {% endif %}
+
+        <small>{{ post.created_at }}</small>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+document.getElementById("add-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+
+    formData.append("content", document.getElementById("content").value);
+
+    const img = document.getElementById("image");
+    if (img.files.length > 0) {
+        formData.append("image", img.files[0]);
+    }
+
+    const res = await fetch("/api/posts/add", {
+        method: "POST",
+        body: formData
+    });
+
+    if (res.ok) {
+        location.reload();
+    } else {
+        const data = await res.json();
+        alert(data.error || "Napaka");
+    }
+});
+</script>
+
+</body>
+</html>
